@@ -2,13 +2,14 @@
 | Creating agents for better health care understanding.
 
 By: 
-- [Susan Kraemer, PhD]
-- Cameron Guthrie
-- Patrick Cavins, PhD
+- [Susan Kraemer, PhD](https://www.linkedin.com/in/susankraemer/)
+- [Cameron Guthrie](https://www.linkedin.com/in/cameron-guthrie-8340032a/)
+- [Patrick Cavins, PhD](https://www.linkedin.com/in/patrickcavins/)
 
 ## Background 
 
-An agentic application can have multiple users and each user may have multiple sessions with the application. To manage these sessions and events, ADK offers a Session Manager and Runner.
+An agentic application can have multiple users and each user may have multiple sessions with the application. To manage these sessions and events, ADK offers a Session Manager and Runner. Created as part of the [5-Day AI Agents Intensive Course with Google](https://www.kaggle.com/learn-guide/5-day-agents)
+
 
 **SessionService: The storage layer**
 
@@ -21,15 +22,23 @@ Manages the flow of information between user and agent
 Automatically maintains conversation history
 Handles the Context Engineering behind the scenes
 
-## Current structure
-- `b4-soup-edit` - python file for parsing a full text html publication 
-- `capstone-project-notebook.ipynb` - jupyter notebook that 2 different agent deployments. 
-- `query-script` - python script that creates and runs the agents end - to - end
-- `query-pub-med` - pythong script that query the pubmed database
--  `pubmed-univ-of-alabama.ipynb` - demo notebook created by UofAla
+## Project structure 
+1. `capstone-project-with-mcp-server.ipynb`
+- This is an end-to-end jupyter notebook that uses an MCP service with a single agent to answer medical queries
+ - Example log, `demo_logs_from_query-script.txt` 
+
+2. `multi-agent-and-custom-tool-script.py`
+- This is python script which creates multiple agents. One agents uses the Pubmed MCP, and the other agent uses a custom tool called `get_dict_from_query` which return a structure python dictionary using the format {'PMID': list[int]}. Both agents are sub-agents inside of root_agent which coordinates their invocation.
+ - Example log, `demo_logs_with_mcp_server.txt
+
+3. `README.md`
+- The explainer, hopefully. 
+
+4. `b4-soup-edit` 
+- **workin progress** python file for parsing a full text html publication 
 
 
-## Reserarch
+## References 
 
 **PUBMED MCP**
 - [GITHUB](https://github.com/grll/pubmedmcp)
