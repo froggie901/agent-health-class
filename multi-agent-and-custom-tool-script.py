@@ -94,6 +94,7 @@ mcp_pubmed_server = McpToolset(
     )
 )
 
+
 def get_dict_from_query(method: str) -> dict:
     """Looks up a list of PMIDs based of the query string provided. Results are sorted by publication date, and only includes review articles.
     The results of query are converted into a dictionary.

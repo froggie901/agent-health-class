@@ -26,6 +26,7 @@ Handles the Context Engineering behind the scenes
 1. `capstone-project-with-mcp-server.ipynb`
 - This is an end-to-end jupyter notebook that uses an MCP service with a single agent to answer medical queries
  - Example log, `demo_logs_from_query-script.txt` 
+ - Kaggle notebook, [https://www.kaggle.com/code/camreon/team-seattle-capstone-project](https://www.kaggle.com/code/camreon/team-seattle-capstone-project)
 
 2. `multi-agent-and-custom-tool-script.py`
 - This is python script which creates multiple agents. One agents uses the Pubmed MCP, and the other agent uses a custom tool called `get_dict_from_query` which return a structure python dictionary using the format {'PMID': list[int]}. Both agents are sub-agents inside of root_agent which coordinates their invocation.
