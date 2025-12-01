@@ -3,6 +3,14 @@ import os
 import asyncio
 from dotenv import load_dotenv
 from typing import Any, Dict
+import requests as re
+from time import sleep
+import matplotlib.pyplot as plt
+from datetime import datetime
+import sqlite3 as sql
+import pandas as pd
+
+retmax = 10
 
 from google.adk.agents import Agent, LlmAgent, SequentialAgent
 from google.adk.apps.app import App, EventsCompactionConfig
@@ -23,6 +31,9 @@ from google.adk.plugins.reflect_retry_tool_plugin import (
 )
 
 from google.genai import types
+
+print ("✅ Imported necessary packages")
+print ("Starting script...")
 
 
 # Load environment variables from the .env file (if present)
@@ -83,13 +94,46 @@ mcp_pubmed_server = McpToolset(
     )
 )
 
+def get_dict_from_query(method: str) -> dict:
+    """Looks up a list of PMIDs based of the query string provided. Results are sorted by publication date, and only includes review articles.
+    The results of query are converted into a dictionary.
+    
+    Args: 
+        method (str): Query string to search Pubmed for.
+    
+    Returns:
+        dict: Dictionary of PMIDs from Pubmed search results.
+    """
+    
+    base_data_pmids_dict = {}
+    
+    ESEARCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
+
+    base_params = {
+            'db': 'pubmed',
+            'term': method + ' AND review[pt]',
+            # 'term': term + ' free full text[sb] AND review[pt]',
+            'retmode': 'json',
+            'retmax': retmax,
+            'sort': 'pub date',
+        }
+    
+    response = re.get(ESEARCH_URL, params=base_params)
+    response.raise_for_status()  # Raise an error for bad responses
+    base_data = response.json()
+    base_data_pmids = base_data['esearchresult']['idlist']
+    base_data_pmids_dict = {'PMID': base_data_pmids}
+    print(base_data_pmids_dict)
+
+    return base_data_pmids_dict
+
 # Pubmed Search Agent
 pubmed_search_agent = LlmAgent(
     name="pubmed_search_agent",
     model=Gemini(model="gemini-2.5-flash-lite", retry_options=retry_config),
     description="Searches for information using Pubmed",
     instruction="""Return a list of relevant research paper PMIDs based on the user's query. Focus on finding papers that directly address the user's topic. Focus on papers that are recent and highly cited. Return only the PMIDs in a comma-separated format.""",
-    tools=[mcp_pubmed_server],
+    tools=[get_dict_from_query]
     # output_key="pmids"
 )
 
@@ -107,13 +151,13 @@ summarize_agent = LlmAgent(
 root_agent = LlmAgent(
     name="research_paper_finder_agent",
     model=Gemini(model="gemini-2.5-flash-lite", retry_options=retry_config),
-    instruction=""" You are an expert research assistant. Your task is to find research papers and summarize them. Your audience is a professional working in science communications seeking evidence-based information.
-    You MUST ALWAYS follow these steps:
-    1) Find research papers on the user provided topic using the 'pubmed_search_agent'. 
-    2) Then, pass the papers to 'summarize_agent' tool to summarize the papers.
-    3) Check that summaries include a citation with a link to the article. If not, go back to step 2 and ask the summarize_agent to include citations with links.
-    4) Finally, provide a comprehensive response to the user that includes the summaries and citations
-    Make sure to ALWAYS use the tools provided to you. NEVER make up information or citations.
+    instruction=""" You are an expert research assistant writing reports for the general public.
+     
+    For research requests: 
+    1. Use `pubmed_search_agent` to find relevant research papers.  
+    2. Use `summarize_agent` to summarize the papers found.
+    3. Write a concise report. Your report MUST include the PMIDs returned from `pubmed_search_agent`.
+    4. Always use the tools provided; never fabricate information or citations.
     """,
     tools=[AgentTool(agent=pubmed_search_agent), AgentTool(agent=summarize_agent)]
 )
@@ -135,15 +179,59 @@ runner = Runner(
     ],
 )
 
-QUERY = "How is metformin related to diabetes control?"
+
+# QUERY = "Are there gene therapies available for type 2 diabetes?"
+# QUERY = "How is metformin related to diabetes control?"
 # QUERY = "How does hormone replacement therapy, including both testosterone and estrogen, effect your A1C?"
 # QUERY = "What are the main causes of acute respiratory distress syndrome?"
 # QUERY = "I want to learn about stage 4 prostate cancer. What can cause it?"
 # QUERY = "Yes. What's the best treatment for stage 4 prostate cancer?"
 # QUERY = "Can you tell me more about genomically targeted therapies"
+QUERY = "I want to know more about Gynecomastia Surgery."
+# QUERY = "How do I best practice glycemic control?"
+# QUERY = "How does treating sleep apnea help with diabetes management?"
+
+
+async def run_session(
+    runner_instance: Runner, user_queries: list[str] | str, session_id: str = "default"
+):
+    """Helper function to run queries in a session and display responses."""
+    print(f"\n### Session: {session_id}")
+
+    # Create or retrieve session
+    try:
+        session = await session_service.create_session(
+            app_name=APP_NAME, user_id=USER_ID, session_id=session_id
+        )
+    except:
+        session = await session_service.get_session(
+            app_name=APP_NAME, user_id=USER_ID, session_id=session_id
+        )
+
+    # Convert single query to list
+    if isinstance(user_queries, str):
+        user_queries = [user_queries]
+
+    # Process each query
+    for query in user_queries:
+        print(f"\nUser > {query}")
+        query_content = types.Content(role="user", parts=[types.Part(text=query)])
+
+        # Stream agent response
+        async for event in runner_instance.run_async(
+            user_id=USER_ID, session_id=session.id, new_message=query_content
+        ):
+            if event.is_final_response() and event.content and event.content.parts:
+                text = event.content.parts[0].text
+                if text and text != "None":
+                    print(f"Model: > {text}")
+
+
+
 
 
 async def main():
-    response = await runner.run_debug(QUERY, verbose=True)
+    response = await run_session(runner, QUERY, "conversation-surgery-01")
+    
 
 asyncio.run(main())
